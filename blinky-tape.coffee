@@ -6,6 +6,17 @@ _ = require('lodash')
 ledCount = 60
 resetPosition = new Buffer([0x0, 0x0, 0xFF])
 
+rgbToBuffer = (rgbList) =>
+	rgbBuffer = new Buffer(rgbList.length * 3)
+	for i in [0..rgbList.length - 1]
+		rgb = rgbList[i]
+		rgbBuffer[i * 3] = rgb.red
+		rgbBuffer[i * 3 + 1] = rgb.green
+		rgbBuffer[i * 3 + 2] = rgb.blue
+
+	return rgbBuffer
+
+
 class BlinkyTape
 
 	constructor : (portName) ->
@@ -31,26 +42,18 @@ class BlinkyTape
 			defer.resolve( new PSerial(serial))
 		)
 
-	send: =>
-		@connection.then (pserial) =>
-			pserial.write(resetPosition)
+	send: (rgbList) =>
+		@connection.then (pserial) =>			
+
+		 	console.log('made it')
+		 	b = rgbToBuffer(rgbList)
+
+		 	pserial.write(b)
+		 		.then(pserial.write(resetPosition))
 				.then(pserial.drain)
-				.then( =>
-				 	console.log('made it')
-				 	b = new Buffer(30)
-				 	for i in [0..29]
-				 		b[i] = i % 2 * 200
-
-				 	pserial.write(b)
-			 	)
-			 	.then(pserial.drain)
-			 	.catch((error) =>
-			 		console.error('ERROR', error)
-		 		)
+				.catch((error) => console.error('ERROR', error))
 
 
-b = new BlinkyTape();
-b.send()
 
 class PSerial
 	constructor: (@serial) ->
@@ -72,3 +75,16 @@ class PSerial
 				resolve()
 			)
 		)
+
+
+red = { red: 254, green: 0, blue: 0}
+green = { red: 0, green: 254, blue: 0}
+blue = { red: 0, green: 0, blue: 254}
+
+b = new BlinkyTape();
+
+b.send([red, green, red, blue, blue])
+	.delay(100)
+	.then( => b.send([blue, blue, blue, blue]))
+	.delay(100)
+	.then( => b.send([red, red, red, red, red]))
