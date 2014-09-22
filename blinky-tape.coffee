@@ -20,11 +20,6 @@ rgbToBuffer = (rgbList) =>
 class BlinkyTape
 
 	constructor : (portName) ->
-		@ledData = []
-		
-		for i in [1..60]
-			@ledData.push({ red: 255, green: 255, blue: 255 })
-
 		defer = w.defer()
 		@connection = defer.promise
 
@@ -44,14 +39,24 @@ class BlinkyTape
 
 	send: (rgbList) =>
 		@connection.then (pserial) =>			
-
-		 	console.log('made it')
 		 	b = rgbToBuffer(rgbList)
 
 		 	pserial.write(b)
 		 		.then(pserial.write(resetPosition))
 				.then(pserial.drain)
 				.catch((error) => console.error('ERROR', error))
+				.then( => return this)
+
+	animate: (frames, ms) =>
+		w.iterate(
+			(i) =>
+				i = i % frames.length
+				this.send( frames[i] ).then( => return i + 1)
+			, 
+			=> false, 
+			(i) => w().delay(ms),
+			0
+		).done()
 
 
 
@@ -61,7 +66,6 @@ class PSerial
 	write : (buffer) =>
 		w.promise( (resolve, reject) =>
 			@serial.write(buffer, (error) =>
-				console.log('written ' + buffer.length)
 				reject(error) if error
 				resolve()
 			)
@@ -70,21 +74,9 @@ class PSerial
 	drain : =>
 		w.promise( (resolve, reject) =>
 			@serial.drain((error) =>
-				console.log('drain');
 				reject(error) if error
 				resolve()
 			)
 		)
 
-
-red = { red: 254, green: 0, blue: 0}
-green = { red: 0, green: 254, blue: 0}
-blue = { red: 0, green: 0, blue: 254}
-
-b = new BlinkyTape();
-
-b.send([red, green, red, blue, blue])
-	.delay(100)
-	.then( => b.send([blue, blue, blue, blue]))
-	.delay(100)
-	.then( => b.send([red, red, red, red, red]))
+module.exports = BlinkyTape
