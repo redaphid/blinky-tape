@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/redaphid/blinky-tape",
   "dependencies": {
+    "lodash": "^2.4.1",
     "serialport": "^1.4.6",
     "when": "^3.4.6"
   }
