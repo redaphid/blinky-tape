@@ -2,12 +2,17 @@ skynet = require('skynet')
 _ = require('lodash')
 BlinkyTape = require('../blinky-tape.coffee')
 
+ledCount = 60
+
 r = { red: 254, green: 0, blue: 0}
 g = { red: 0, green: 254, blue: 0}
 b = { red: 0, green: 0, blue: 254}
 o = {red: 0, green: 0, blue: 0}
 
 blinkyData = []
+_.times(60, =>
+    blinkyData.push(o)
+  )
 
 
 
@@ -25,9 +30,17 @@ conn.on "ready", (data) ->
   console.log data
 
 conn.on "message", (message) ->
-  blink.send(message.payload)
+  try
+    console.log('MESSAGE!!')
+    console.log(message)
+    blinkyData = message.payload.concat( _.rest(blinkyData, message.payload.length))
+    blinkyData.length = ledCount unless blinkyData.length < ledCount
+    blink.send(blinkyData)
+  catch error
+
+    console.log("Error! #{error}")
     
 
 blink = new BlinkyTape('/dev/ttyACM0');
 
-blink.send( [ r, g, b, r, g, b, b, r, g ] )
+blink.send( blinkyData )

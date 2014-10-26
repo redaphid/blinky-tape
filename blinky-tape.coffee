@@ -1,6 +1,5 @@
-SerialPort = require('serialport').SerialPort
-w = require('when')
-wNode = require('when/node')
+{SerialPort} = require('serialport')
+When = require('when')
 _ = require('lodash')
 
 ledCount = 60
@@ -20,7 +19,7 @@ rgbToBuffer = (rgbList) =>
 class BlinkyTape
 
 	constructor : (portName) ->
-		defer = w.defer()
+		defer = When.defer()		
 		@connection = defer.promise
 
 		errorHandler = (error) =>
@@ -48,13 +47,13 @@ class BlinkyTape
 				.then( => return this)
 
 	animate: (frames, ms) =>
-		w.iterate(
+		When.iterate(
 			(i) =>
 				i = i % frames.length
 				this.send( frames[i] ).then( => return i + 1)
 			, 
 			=> false, 
-			(i) => w().delay(ms),
+			(i) => When().delay(ms),
 			0
 		).done()
 
@@ -64,7 +63,7 @@ class PSerial
 	constructor: (@serial) ->
 
 	write : (buffer) =>
-		w.promise( (resolve, reject) =>
+		When.promise( (resolve, reject) =>
 			@serial.write(buffer, (error) =>
 				reject(error) if error
 				resolve()
@@ -72,7 +71,7 @@ class PSerial
 		)
 
 	drain : =>
-		w.promise( (resolve, reject) =>
+		When.promise( (resolve, reject) =>
 			@serial.drain((error) =>
 				reject(error) if error
 				resolve()
