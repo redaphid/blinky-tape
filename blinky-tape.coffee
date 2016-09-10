@@ -13,6 +13,10 @@ class BlinkyTape
 		@ledCount  ?= DEFAULT_LED_COUNT
 		@ledStates ?= _.fill Array(@ledCount), 'blue'
 
+	close: (callback=->) =>
+		return callback() unless @serial?
+		@serial.close callback
+		
 	connect: (callback=->) =>
 		debug "connecting to #{@port}"
 		@serial = new SerialPort @port, baudrate: 115200
