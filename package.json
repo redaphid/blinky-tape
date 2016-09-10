@@ -1,6 +1,6 @@
 {
   "name": "blinky-tape",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A library for controlling a blinky-tape in node",
   "main": "index.js",
   "scripts": {
@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/redaphid/blinky-tape",
   "dependencies": {
+    "coffee-script": "^1.10.0",
     "debug": "^2.2.0",
     "lodash": "^4.15.0",
     "serialport": "^4.0.1",
