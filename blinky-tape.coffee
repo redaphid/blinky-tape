@@ -1,81 +1,46 @@
-{SerialPort} = require('serialport')
-When = require('when')
-_ = require('lodash')
+_          = require 'lodash'
+debug 		 = require('debug')('blinky-tape')
+SerialPort = require 'serialport'
+tinycolor  = require 'tinycolor2'
 
-ledCount = 60
-resetPosition = new Buffer([0x0, 0x0, 0xFF])
-
-rgbToBuffer = (rgbList) =>
-	rgbBuffer = new Buffer(rgbList.length * 3)
-	for i in [0..rgbList.length - 1]
-		rgb = rgbList[i]
-		rgbBuffer[i * 3] = rgb.red
-		rgbBuffer[i * 3 + 1] = rgb.green
-		rgbBuffer[i * 3 + 2] = rgb.blue
-
-	return rgbBuffer
-
+DEFAULT_LED_COUNT = 50
+DEFAULT_PORT			= '/dev/ttyACM0'
+RESET_POSITION    = new Buffer([0x0, 0x0, 0xFF])
 
 class BlinkyTape
+	constructor: ({@port, @ledCount, @ledStates}={}) ->
+		@port      ?= DEFAULT_PORT
+		@ledCount  ?= DEFAULT_LED_COUNT
+		@ledStates ?= _.fill Array(@ledCount), 'blue'
 
-	constructor : (portName) ->
-		defer = When.defer()		
-		@connection = defer.promise
+	connect: (callback=->) =>
+		debug "connecting to #{@port}"
+		@serial = new SerialPort @port, baudrate: 115200
+		@serial.on 'open', (error) =>
+			debug "opened port. Error:", error
+			callback error
 
-		errorHandler = (error) =>
-			console.error(error)
-			defer.reject(error)
+	updateColor: ({number, color}, callback=->) =>
+		@ledStates[number] = color
+		@sync()
 
-		serial = new SerialPort(portName || '/dev/ttyACM0', baudrate: 115200)
-		
-		serial.on('error', errorHandler)
-		serial.on('open', (error) =>
-			return errorHandler(error) if error
-			
-			console.log('connected')
-			defer.resolve( new PSerial(serial))
-		)
+	sync: (callback=->) =>
+		debug 'sync'
+		rgbBuffer = new Buffer @ledCount * 3
+		_.each @ledStates, (color, i) =>
 
-	send: (rgbList) =>
-		@connection.then (pserial) =>			
-		 	b = rgbToBuffer(rgbList)
+			{r,g,b} = tinycolor(color).toRgb()
+			r = 254 if r > 254
+			g = 254 if g > 254
+			b = 254 if b > 254
+			rgbBuffer[i * 3] = r
+			rgbBuffer[i * 3 + 1] = g
+			rgbBuffer[i * 3 + 2] = b
 
-		 	pserial.write(b)
-		 		.then(pserial.write(resetPosition))
-				.then(pserial.drain)
-				.catch((error) => console.error('ERROR', error))
-				.then( => return this)
+		debug "writing:", rgbBuffer.toString 'hex'
 
-	animate: (frames, ms) =>
-		When.iterate(
-			(i) =>
-				i = i % frames.length
-				this.send( frames[i] ).then( => return i + 1)
-			, 
-			=> false, 
-			(i) => When().delay(ms),
-			0
-		).done()
-
-
-
-class PSerial
-	constructor: (@serial) ->
-
-	write : (buffer) =>
-		When.promise( (resolve, reject) =>
-			@serial.write(buffer, (error) =>
-				reject(error) if error
-				resolve()
-			)
-		)
-
-	drain : =>
-		When.promise( (resolve, reject) =>
-			@serial.drain((error) =>
-				reject(error) if error
-				resolve()
-			)
-		)
+		@serial.write Buffer.concat([rgbBuffer, RESET_POSITION]), (error) =>
+			debug "finished writing:", error
+			@serial.flush callback
 
 module.exports = BlinkyTape
